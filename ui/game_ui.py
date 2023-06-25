@@ -27,13 +27,20 @@ class GameUI:
         self.is_typing_mode = True
 
         # confirm button
-        self.confirm_button_rect = pygame.Rect((self.total_grid_size[0] + right_padding // 2, self.total_grid_size[1] - 50,110,50))
+        self.confirm_button_rect = pygame.Rect((self.total_grid_size[0] + right_padding // 4, self.total_grid_size[1] - 50,110,50))
         self.confirm_button_pressed = False
         self.confirm_button_color = WHITE
 
         # getRandomNum button
-        self.getRandomNum_button_rect = pygame.Rect((self.total_grid_size[0] + right_padding // 2, self.total_grid_size[1] - 100,110,50))
+        self.getRandomNum_button_rect = pygame.Rect((self.total_grid_size[0] + right_padding // 4, self.total_grid_size[1] - 110,110,50))
         self.getRandomNum_button_color = WHITE
+
+        # record button
+        self.record_button_rect = pygame.Rect((self.total_grid_size[0] + right_padding*2 // 4, self.total_grid_size[1] - 50,110,50))
+        self.record_button_color = WHITE
+
+
+        self.record = {"win": 0, "lose": 0}
     
     def start(self):
         pygame.display.set_caption('Bingo Game')
@@ -46,6 +53,7 @@ class GameUI:
             self.draw_grid()
             self.draw_getRandomNum_button()
             self.draw_confirm_button()
+            self.draw_record_button()
             
             pygame.display.flip()
             for event in pygame.event.get():
@@ -53,7 +61,6 @@ class GameUI:
                 if event.type == pygame.QUIT:
                     running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    print("click in")
                     self.handle_click(event)
                     break
                 if self.is_typing_mode and event.type == pygame.KEYDOWN:
@@ -61,7 +68,7 @@ class GameUI:
                         input_value = self.game.player_inputs[self.current_cell][:-1]
                         self.game.update_player_input(*self.current_cell, input_value)
                     if len(self.game.player_inputs.get(self.current_cell, '')) < 2:
-                        input_value = self.game.player_inputs[self.current_cell] + event.unicode
+                        input_value = self.game.player_inputs.get(self.current_cell,'') + event.unicode
                         self.game.update_player_input(*self.current_cell, input_value)
 
             clock.tick(30)
@@ -92,28 +99,29 @@ class GameUI:
         # 按下confirm
         if self.confirm_button_rect.collidepoint(x, y) and not self.confirm_button_pressed:
             # 檢查有沒有全填滿
+
+            self.game.used_nums = [j for i in self.game.grid for j in i]
             if not self.game.is_all_filled():
                 utility.message_box.show_message("Hints", "Please fill in all numbers!")
                 return
+            
+            for (i, j) in self.game.player_inputs:
+                if self.game.is_invalid_input(i, j, self.game.grid[i][j]):
+                    utility.message_box.show_message("Error", "Invalid input at position " + str((i + 1, j + 1)) + "! Please enter again.")
+                    return
+                
             self.is_typing_mode = False
             self.confirm_button_color = BLUE
-
-            self.game.used_nums = [j for i in self.game.grid for j in i]
-            print(f"choose numbers: {self.game.grid}")
             return
 
-
+        # 點擊格子
         if x < self.total_grid_size[0]:
             i = x // self.grid_size[0]
             j = y // self.grid_size[1]
 
-            print(self.is_typing_mode, i, j)
             if self.is_typing_mode:
-                if (i, j) not in self.game.player_inputs:
-                    self.current_cell = (i, j)
-                    print(f"before: {self.current_cell} = {self.game.grid[i][j]}")
-                    self.game.update_player_input(i, j, "")
-                    print(f"after: {self.current_cell} = {self.game.grid[i][j]}")
+                self.current_cell = (i, j)
+                self.game.update_player_input(i, j, "")
 
         # 按下getRandomNum
         if self.getRandomNum_button_rect.collidepoint(x, y):
@@ -126,14 +134,20 @@ class GameUI:
                         break
             self.game.rounds += 1
             if self.game.check_game_finish() == "win":
-                utility.message_box.show_message("Win!", "You win!")
+                self.record["win"] += 1
+                utility.message_box.show_message("Win!", f"You win!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
                 self.restart_game()
             elif self.game.check_game_finish() == "lose":
-                utility.message_box.show_message("Lose!", "You lose!")
+                self.record["lose"] += 1
+                utility.message_box.show_message("Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
                 self.restart_game()
             print(f"Get: {num}")
             print(f"rounds: {self.game.rounds}")
             return
+
+        if self.record_button_rect.collidepoint(x, y):
+                utility.message_box.show_message("Record", f"Win: {self.record['win']} - Lose: {self.record['lose']}")
+            
 
     def draw_confirm_button(self):
         pygame.draw.rect(self.screen, self.confirm_button_color, self.confirm_button_rect, 2)
@@ -145,6 +159,11 @@ class GameUI:
         pygame.draw.rect(self.screen, self.getRandomNum_button_color, self.getRandomNum_button_rect, 2)
         text = self.font.render("Get", True, WHITE)
         self.screen.blit(text, self.getRandomNum_button_rect.move(10, 10))
+
+    def draw_record_button(self):
+        pygame.draw.rect(self.screen, self.record_button_color, self.record_button_rect, 2)
+        text = self.font.render("Record", True, WHITE)
+        self.screen.blit(text, self.record_button_rect.move(10, 10))
 
     def restart_game(self):
         # self.game.reset()

@@ -1,4 +1,5 @@
 import random
+from collections import Counter
 
 class GameLogic():
     def __init__(self):
@@ -12,6 +13,9 @@ class GameLogic():
         self.player_inputs = {}
 
         self.rounds = 0
+
+        self.min_number = 1
+        self.max_number = 99
     
     def select(self, x, y):
         if self.selected[x][y] == False and (x,y) in self.player_inputs:  
@@ -44,13 +48,11 @@ class GameLogic():
         return False
     
     def update_player_input(self, x, y, value):
-        # if not self.is_valid_input(x, y, value):
-        #     print("Invalid input, please enter a valid number.")
-        #     return False
-        print(f'(x, y) : {self.selected[x][y]}')
         self.grid[x][y] = value
         self.player_inputs[(x, y)] = value
-        return True
+        print(f'player_inputs[(x,y)]: {self.player_inputs[(x,y)]}')
+
+
     
     def is_all_filled(self):
         return len(self.player_inputs) == self.grid_num**2
@@ -60,10 +62,29 @@ class GameLogic():
         self.used_nums.remove(output)
         return output
 
-    # def reset(self):
-        # self.grid = [["" for _ in range(self.grid_num)] for _ in range(self.grid_num)]
-        # self.selected = [[False]*self.grid_num for _ in range(self.grid_num)]
-        # self.rounds = 0
-        # self.used_nums = []
-        # self.player_name = ""
-        # self.player_inputs = {}
+    def is_invalid_input(self, x: int, y: int, value: str) -> bool:
+        if not value.isdigit():
+            return True
+        count = Counter(self.used_nums)
+        if count[value] > 1:
+            return True
+        value = int(value)
+        if self.is_invalid_num_range(value):
+            return True
+        if (x == y or x == self.grid_num - 1 - y) and not self.is_prime(value):
+            return True
+        return False
+
+    def is_prime(self, num: int) -> bool:
+        if num < 2:
+            return False
+        for i in range(2, int(num ** 0.5) + 1):
+            if num % i == 0:
+                return False
+        return True
+    
+
+    def is_invalid_num_range(self, value: int) -> bool:
+        if not self.min_number <= int(value) <= self.max_number:
+            return True
+        return False
