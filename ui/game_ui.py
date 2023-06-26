@@ -45,15 +45,15 @@ class GameUI:
     def start(self):
         pygame.display.set_caption('Bingo Game')
         clock = pygame.time.Clock()
-        
+    
 
         running = True
         while running:
             self.screen.fill(BLACK)
             self.draw_grid()
-            self.draw_getRandomNum_button()
-            self.draw_confirm_button()
-            self.draw_record_button()
+            self.draw_button(self.screen, self.getRandomNum_button_color, self.getRandomNum_button_rect,"Get")
+            self.draw_button(self.screen, self.confirm_button_color, self.confirm_button_rect,"Confirm")
+            self.draw_button(self.screen, self.record_button_color, self.record_button_rect,"Record")
             
             pygame.display.flip()
             for event in pygame.event.get():
@@ -148,22 +148,10 @@ class GameUI:
         if self.record_button_rect.collidepoint(x, y):
                 utility.message_box.show_message("Record", f"Win: {self.record['win']} - Lose: {self.record['lose']}")
             
-
-    def draw_confirm_button(self):
-        pygame.draw.rect(self.screen, self.confirm_button_color, self.confirm_button_rect, 2)
-        text = self.font.render("Confirm", True, WHITE)
-        self.screen.blit(text, self.confirm_button_rect.move(10, 10))
-
-
-    def draw_getRandomNum_button(self):
-        pygame.draw.rect(self.screen, self.getRandomNum_button_color, self.getRandomNum_button_rect, 2)
-        text = self.font.render("Get", True, WHITE)
-        self.screen.blit(text, self.getRandomNum_button_rect.move(10, 10))
-
-    def draw_record_button(self):
-        pygame.draw.rect(self.screen, self.record_button_color, self.record_button_rect, 2)
-        text = self.font.render("Record", True, WHITE)
-        self.screen.blit(text, self.record_button_rect.move(10, 10))
+    def draw_button(self, surface, color, rect, string):
+        pygame.draw.rect(surface, color, rect, 2)
+        text = self.font.render(string, True, WHITE)
+        surface.blit(text, rect.move(10, 10))
 
     def restart_game(self):
         # self.game.reset()
