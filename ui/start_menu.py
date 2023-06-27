@@ -11,6 +11,7 @@ class LoginWindow:
     def __init__(self, user_system: UserSystem):
         self.window = Tk()
         self.window.title("Login or Register")
+        self.window.geometry("250x200")
 
         self.username_label = Label(self.window, text="Username")
         self.username_label.pack()
@@ -41,7 +42,8 @@ class LoginWindow:
             self.user = username
             self.window.destroy()
             game = GameLogic()
-            ui = GameUI(game)
+            game_state = self.user_system.load_game_state(self.user)
+            ui = GameUI(self.user_system, game, self.user, game_state)
             ui.start()
         else:
             messagebox.showinfo("Error", "Invalid username or password")

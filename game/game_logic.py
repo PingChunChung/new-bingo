@@ -8,8 +8,6 @@ class GameLogic():
         self.selected = [[False]*self.grid_num for _ in range(self.grid_num)]
         self.used_nums = []
 
-
-        self.player_name = ""
         self.player_inputs = {}
 
         self.rounds = 0
@@ -48,7 +46,7 @@ class GameLogic():
         return False
     
     def update_player_input(self, x, y, value):
-        self.grid[x][y] = value
+        self.grid[y][x] = value
         self.player_inputs[(x, y)] = value
         print(f'player_inputs[(x,y)]: {self.player_inputs[(x,y)]}')
 

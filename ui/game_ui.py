@@ -1,6 +1,8 @@
 import pygame
 from game.game_logic import GameLogic
 import utility.message_box
+from db.database import UserSystem
+
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -9,11 +11,21 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
 class GameUI:
-    def __init__(self, game: GameLogic):
+    def __init__(self, user_system: UserSystem, game: GameLogic, player_name = "",  game_state = None):
         right_padding = 500
         self.game = game
         pygame.init()
+        self.user_system = user_system
 
+        if game_state:
+            # print(game_state)
+            self.game.grid = game_state["grid"]
+            self.game.selected = game_state["selected"]
+            self.game.used_nums = game_state["used_nums"]
+            self.game.player_inputs = game_state["player_inputs"]
+            self.game.rounds = game_state["rounds"]
+
+        self.player_name = player_name
         self.total_grid_size = (600, 600)  # size of the grid
         self.grid_size = (self.total_grid_size[0] // self.game.grid_num, self.total_grid_size[1] // self.game.grid_num)
         self.colored = [[False]*self.game.grid_num for _ in range(self.game.grid_num)]
@@ -41,6 +53,8 @@ class GameUI:
 
 
         self.record = {"win": 0, "lose": 0}
+
+        
     
     def start(self):
         pygame.display.set_caption('Bingo Game')
@@ -59,6 +73,9 @@ class GameUI:
             for event in pygame.event.get():
                 # 關閉遊戲
                 if event.type == pygame.QUIT:
+                    print(self.game)
+                    if self.player_name:
+                       self.user_system.save_game_state(self.player_name, self.game.__dict__)
                     running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_click(event)
@@ -101,6 +118,8 @@ class GameUI:
             # 檢查有沒有全填滿
 
             self.game.used_nums = [j for i in self.game.grid for j in i]
+            print(f"self.grid: {self.game.grid}")
+            print(f"self.game.used_nums: {self.game.used_nums}")
             if not self.game.is_all_filled():
                 utility.message_box.show_message("Hints", "Please fill in all numbers!")
                 return
@@ -112,6 +131,7 @@ class GameUI:
                 
             self.is_typing_mode = False
             self.confirm_button_color = BLUE
+            self.confirm_button_pressed = True
             return
 
         # 點擊格子
@@ -157,4 +177,6 @@ class GameUI:
         # self.game.reset()
         self.game.__init__()
         self.is_typing_mode = True
+
+        self.confirm_button_pressed = False
         self.confirm_button_color = WHITE
