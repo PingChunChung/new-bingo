@@ -60,7 +60,7 @@ class LoginWindow:
     def game_start(self):
         self.window.destroy()
         game = GameLogic()
-        ui = GameUI(game)
+        ui = GameUI(self.user_system, game)
         ui.start()
 
     def run(self):
