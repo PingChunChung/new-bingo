@@ -5,7 +5,6 @@ from db.database import UserSystem
 
 from game.game_logic import GameLogic
 from ui.game_ui import GameUI
-from db.database import UserSystem
 
 class LoginWindow:
     def __init__(self, user_system: UserSystem):
