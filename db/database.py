@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+import hashlib
 
 class UserSystem:
     def __init__(self):
@@ -9,12 +10,14 @@ class UserSystem:
     def register(self, username, password):
         if self.collection.find_one({"username": username}):
             return False  # User exists
-        user = {"username": username, "password": password}
+        hashed_password = self.hash_password(password)
+        user = {"username": username, "password": hashed_password}
         self.collection.insert_one(user)
         return True  # Registration successful
 
     def login(self, username, password):
-        account = self.collection.find_one({"username": username, "password": password})
+        hashed_password = self.hash_password(password)
+        account = self.collection.find_one({"username": username, "password": hashed_password})
         return bool(account)  # Returns True if login successful
 
     def save_game_state(self, username, game_state):
@@ -37,3 +40,8 @@ class UserSystem:
             game_state['player_inputs'] = {eval(k): v for k, v in player_inputs.items()}
 
         return game_state
+    
+    def hash_password(self, password):
+        hash_object = hashlib.sha256(password.encode())
+        hashed_password = hash_object.hexdigest()
+        return hashed_password

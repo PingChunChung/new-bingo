@@ -49,8 +49,6 @@ class GameLogic():
         self.grid[y][x] = value
         self.player_inputs[(x, y)] = value
         print(f'player_inputs[(x,y)]: {self.player_inputs[(x,y)]}')
-
-
     
     def is_all_filled(self):
         return len(self.player_inputs) == self.grid_num**2

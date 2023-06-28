@@ -1,9 +1,10 @@
 import pygame
-from game.game_logic import GameLogic
+from game.logic import GameLogic
 import utility.message_box
 from db.database import UserSystem
 import socket
 import threading
+from ui.components.buttons import Button
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -15,22 +16,23 @@ class GameUI:
     def __init__(self, user_system: UserSystem, game: GameLogic, player_name = "",  game_state = None, online_mode=False):
         right_padding = 500
 
-        self.running = True
+        self.user_system = user_system
         self.game = game
+        self.player_name = player_name
+        self.running = True
         self.online_mode = online_mode
 
         pygame.init()
-        self.user_system = user_system
 
+        self.server_thread = None
         # 線上模式
         if self.online_mode:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.connect(("localhost", 12345))
             self.server_thread = threading.Thread(target=self.receive_messages)
             self.server_thread.start()
-            self.send_message(f"login {self.player_name}")
-
-
+            self.send_message(f"{self.player_name} login")
+        
         if game_state:
             self.game.grid = game_state["grid"]
             self.game.selected = game_state["selected"]
@@ -38,7 +40,6 @@ class GameUI:
             self.game.player_inputs = game_state["player_inputs"]
             self.game.rounds = game_state["rounds"]
 
-        self.player_name = player_name
         self.total_grid_size = (600, 600)  # size of the grid
         self.grid_size = (self.total_grid_size[0] // self.game.grid_num, self.total_grid_size[1] // self.game.grid_num)
         self.colored = [[False]*self.game.grid_num for _ in range(self.game.grid_num)]
@@ -71,6 +72,14 @@ class GameUI:
         self.round_players = set()  # 当前回合已完成的玩家
         self.waiting_for_round = False  # 是否等待回合结束
 
+        self.buttons = {
+            "confirm": Button(pygame.Rect((self.total_grid_size[0] + right_padding // 4, self.total_grid_size[1] - 50, 110, 50)),
+                                        text="Confirm", font=self.font, callback=self.handle_confirm),
+            "getRandomNum": Button(pygame.Rect((self.total_grid_size[0] + right_padding // 4, self.total_grid_size[1] - 110, 110, 50)),
+                                            text="Get", font=self.font, callback=self.handle_get_random_num),
+            "record": Button(pygame.Rect((self.total_grid_size[0] + right_padding * 2 // 4, self.total_grid_size[1] - 50, 110, 50)),
+                                        text="Record", font=self.font, callback=self.handle_record)
+        }
 
 
     def start(self):
@@ -81,11 +90,10 @@ class GameUI:
         while self.running:
             self.screen.fill(BLACK)
             self.draw_grid()
-            self.draw_button(self.screen, self.getRandomNum_button_color, self.getRandomNum_button_rect,"Get")
-            self.draw_button(self.screen, self.confirm_button_color, self.confirm_button_rect,"Confirm")
-            self.draw_button(self.screen, self.record_button_color, self.record_button_rect,"Record")
+            for button in self.buttons.values():
+                button.draw(self.screen)
             if self.online_mode:
-                self.draw_player_count()  # 显示玩家数量
+                self.draw_player_count()  # 顯示玩家數量
             pygame.display.flip()
             for event in pygame.event.get():
                 # 關閉遊戲
@@ -127,6 +135,8 @@ class GameUI:
                 elif message.startswith("player_count"):
                     _, count = message.split()
                     self.player_count = int(count)
+                else:
+                    print("Received message:", message)  # 在命令行中显示接收到的消息
             except Exception as e:
                 print(f'Error occurred: {e}')
                 break
@@ -160,25 +170,12 @@ class GameUI:
     def handle_click(self, event):
         x, y = event.pos
 
-        # 按下confirm
         if self.confirm_button_rect.collidepoint(x, y) and not self.confirm_button_pressed:
-            # 檢查有沒有全填滿
-            self.game.used_nums = [j for i in self.game.grid for j in i]
-            print(f"self.grid: {self.game.grid}")
-            print(f"self.game.used_nums: {self.game.used_nums}")
-            if not self.game.is_all_filled():
-                utility.message_box.show_message("Hints", "Please fill in all numbers!")
-                return
-            
-            for (i, j) in self.game.player_inputs:
-                if self.game.is_invalid_input(i, j, self.game.grid[i][j]):
-                    utility.message_box.show_message("Error", "Invalid input at position " + str((i + 1, j + 1)) + "! Please enter again.")
-                    return
-                
-            self.is_typing_mode = False
-            self.confirm_button_color = BLUE
-            self.confirm_button_pressed = True
-            return
+            self.confirm_button.handle_click(event)
+        if self.getRandomNum_button_rect.collidepoint(x, y):
+            self.getRandomNum_button.handle_click(event)
+        if self.record_button_rect.collidepoint(x, y):
+            self.record_button.handle_click(event)
 
         # 點擊格子
         if x < self.total_grid_size[0]:
@@ -188,43 +185,6 @@ class GameUI:
             if self.is_typing_mode:
                 self.current_cell = (i, j)
                 self.game.update_player_input(i, j, "")
-
-        # 按下getRandomNum
-        if self.getRandomNum_button_rect.collidepoint(x, y):
-            if self.waiting_for_round:  # 等待回合结束，不能继续获取数字
-                utility.message_box.show_message("Wait", "Please wait for other players to finish the round.")
-                return
-            num = self.game.get_random_num_in_used_nums()
-            # 這邊之後可以優化，不要用迴圈
-            for i in range(self.game.grid_num):
-                for j in range(self.game.grid_num):
-                    if self.game.grid[i][j] == num:
-                        self.game.selected[i][j] = True
-                        break
-            self.game.rounds += 1
-            if self.online_mode:
-                self.send_message("win" if self.game.check_game_finish() == "win" else "lose")
-            if self.game.check_game_finish() == "win":
-                self.send_message("win")
-                # self.record["win"] += 1
-                # utility.message_box.show_message("Win!", f"You win!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
-                # self.restart_game()
-            elif self.game.check_game_finish() == "lose":
-                self.send_message("lose")
-                # self.record["lose"] += 1
-                # utility.message_box.show_message("Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
-                # self.restart_game()
-            print(f"Get: {num}")
-            print(f"rounds: {self.game.rounds}")
-            return
-
-        if self.record_button_rect.collidepoint(x, y):
-                utility.message_box.show_message("Record", f"Win: {self.record['win']} - Lose: {self.record['lose']}")
-            
-    def draw_button(self, surface, color, rect, string):
-        pygame.draw.rect(surface, color, rect, 2)
-        text = self.font.render(string, True, WHITE)
-        surface.blit(text, rect.move(10, 10))
 
     def draw_player_count(self):
         count_text = self.font.render(f"{len(self.round_players)}/{self.player_count}", True, WHITE)
@@ -253,6 +213,56 @@ class GameUI:
     def restart_game(self):
         self.game.__init__()
         self.is_typing_mode = True
-
         self.confirm_button_pressed = False
-        self.confirm_button_color = WHITE
+        self.confirm_button.set_color(WHITE)
+
+    def handle_confirm(self):
+        # 檢查有沒有全填滿
+        self.game.used_nums = [j for i in self.game.grid for j in i]
+        print(f"self.grid: {self.game.grid}")
+        print(f"self.game.used_nums: {self.game.used_nums}")
+        if not self.game.is_all_filled():
+            utility.message_box.show_message("Hints", "Please fill in all numbers!")
+            return
+        
+        for (i, j) in self.game.player_inputs:
+            if self.game.is_invalid_input(i, j, self.game.grid[i][j]):
+                utility.message_box.show_message("Error", "Invalid input at position " + str((i + 1, j + 1)) + "! Please enter again.")
+                return
+        else:   
+            self.is_typing_mode = False
+            self.confirm_button.set_color(BLUE)
+            self.confirm_button_pressed = True
+
+        return
+    def handle_get_random_num(self):
+        if not self.confirm_button_pressed:
+            utility.message_box.show_message("Hints", "Please confirm your input.")
+            return
+        if self.waiting_for_round:  # 等待回合结束，不能继续获取数字
+            utility.message_box.show_message("Wait", "Please wait for other players to finish the round.")
+            return
+        num = self.game.get_random_num_in_used_nums()
+        # 這邊之後可以優化，不要用迴圈
+        for i in range(self.game.grid_num):
+            for j in range(self.game.grid_num):
+                if self.game.grid[i][j] == num:
+                    self.game.selected[i][j] = True
+                    break
+        self.game.rounds += 1
+        if self.online_mode:
+            self.send_message("win" if self.game.check_game_finish() == "win" else "lose")
+        if self.game.check_game_finish() == "win":
+            self.record["win"] += 1
+            utility.message_box.show_message("Win!", f"You win!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
+            self.restart_game()
+        elif self.game.check_game_finish() == "lose":
+            self.record["lose"] += 1
+            utility.message_box.show_message("Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
+            self.restart_game()
+        print(f"Get: {num}")
+        print(f"rounds: {self.game.rounds}")
+        return
+
+    def handle_record(self):
+        utility.message_box.show_message("Record", f"Win: {self.record['win']} - Lose: {self.record['lose']}")

@@ -34,13 +34,14 @@ class GameServer:
                     print(f'Client {client.getsockname()} has closed the connection')
                     break
                 print(f'Received message: {message.decode()} from {client.getsockname()}')
-                self.broadcast(message, client)
+                if message.endswith(b"login"):
+                    print("join here")
+                    self.broadcast(message, client)
                 if message == b"win" or message == b"lose":
+                    print("game over")
                     self.broadcast(message, client)  # 广播消息给所有客户端
                 elif message.startswith(b"login"):
-                    self.broadcast(f"player_count {len(self.clients)}".encode(), client)  # 广播玩家数量给所有客户端
-                    
-                self.broadcast(message, client)
+                    self.broadcast(f"player_count {len(self.clients)}", client)  # 广播玩家数量给所有客户端
             except Exception as e:
                 print(f'Error occurred: {e}')
                 break
