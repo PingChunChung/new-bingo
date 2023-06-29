@@ -26,7 +26,7 @@ class GameServer:
             if client != sender:
                 client.send(message)
             if toSender:
-                client.send(message)
+                sender.send(message)
 
 
     def handle_client(self, client):
@@ -40,7 +40,7 @@ class GameServer:
                 # 玩家加入
                 if message.endswith(b"login"):
                     self.broadcast(message, client)
-                    self.broadcast(f"player_count {len(self.clients)}".encode(), client, toSender=True)  # 再將更新的玩家數量訊息廣播給其他客戶端
+                    self.broadcast(f"player_count {len(self.clients)}".encode(), client, toSender=True)
                 if message == b"win" or message == b"lose":
                     print("game over")
                     self.broadcast(message, client)
