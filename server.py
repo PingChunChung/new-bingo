@@ -21,10 +21,13 @@ class GameServer:
             thread = threading.Thread(target=self.handle_client, args=(client,))
             thread.start()
 
-    def broadcast(self, message, sender):
+    def broadcast(self, message, sender, toSender: bool = False):
         for client in self.clients:
             if client != sender:
                 client.send(message)
+            if toSender:
+                client.send(message)
+
 
     def handle_client(self, client):
         while True:
@@ -34,14 +37,13 @@ class GameServer:
                     print(f'Client {client.getsockname()} has closed the connection')
                     break
                 print(f'Received message: {message.decode()} from {client.getsockname()}')
+                # 玩家加入
                 if message.endswith(b"login"):
-                    print("join here")
                     self.broadcast(message, client)
+                    self.broadcast(f"player_count {len(self.clients)}".encode(), client, toSender=True)  # 再將更新的玩家數量訊息廣播給其他客戶端
                 if message == b"win" or message == b"lose":
                     print("game over")
-                    self.broadcast(message, client)  # 广播消息给所有客户端
-                elif message.startswith(b"login"):
-                    self.broadcast(f"player_count {len(self.clients)}", client)  # 广播玩家数量给所有客户端
+                    self.broadcast(message, client)
             except Exception as e:
                 print(f'Error occurred: {e}')
                 break

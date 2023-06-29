@@ -5,6 +5,7 @@ from db.database import UserSystem
 import socket
 import threading
 from ui.components.buttons import Button
+import queue
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -25,11 +26,12 @@ class GameUI:
         pygame.init()
 
         self.server_thread = None
+        self.player_count_queue = queue.Queue()
         # 線上模式
         if self.online_mode:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.connect(("localhost", 12345))
-            self.server_thread = threading.Thread(target=self.receive_messages)
+            self.server_thread = threading.Thread(target=self.receive_messages, args=(self.player_count_queue,))
             self.server_thread.start()
             self.send_message(f"{self.player_name} login")
         
@@ -81,7 +83,6 @@ class GameUI:
                                         text="Record", font=self.font, callback=self.handle_record)
         }
 
-
     def start(self):
         pygame.display.set_caption('Bingo Game')
         clock = pygame.time.Clock()
@@ -114,11 +115,11 @@ class GameUI:
                         self.game.update_player_input(*self.current_cell, input_value)
 
             clock.tick(30)
-        # pygame.quit()
+
         self.quit_game()
         pygame.quit()
     
-    def receive_messages(self):
+    def receive_messages(self, player_count_queue):
         while self.running:
             try:
                 message = self.server_socket.recv(1024).decode()
@@ -134,9 +135,10 @@ class GameUI:
                     # self.restart_game()
                 elif message.startswith("player_count"):
                     _, count = message.split()
-                    self.player_count = int(count)
+                    player_count = int(count)
+                    player_count_queue.put(player_count)
                 else:
-                    print("Received message:", message)  # 在命令行中显示接收到的消息
+                    print("Received message:", message)
             except Exception as e:
                 print(f'Error occurred: {e}')
                 break
@@ -187,6 +189,8 @@ class GameUI:
                 self.game.update_player_input(i, j, "")
 
     def draw_player_count(self):
+        if not self.player_count_queue.empty():  # 檢查佇列是否有新的玩家數量
+            self.player_count = self.player_count_queue.get()  # 從佇列獲取玩家數量
         count_text = self.font.render(f"{len(self.round_players)}/{self.player_count}", True, WHITE)
         self.screen.blit(count_text, (self.total_grid_size[0] + 10, 10))
 
