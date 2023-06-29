@@ -81,10 +81,6 @@ class OptionsWindow(ButtonAnimation):
         self.password_entry = Entry(self.window, show="*")
         self.password_entry.pack()
 
-        # 測試用
-        self.username_entry.insert(0, "jack")
-        self.password_entry.insert(0, "123")
-
         self.login_button = Button(self.window, text="Login", command=self.login)
         self.login_button.pack(pady=5)
         self.set_button_animation(self.login_button)

@@ -117,6 +117,7 @@ class GameUI:
         self.quit_game()
         pygame.quit()
 
+    # 收server訊息
     def receive_messages(self, player_count_queue: queue.Queue) -> None:
         while self.running:
             try:
@@ -140,7 +141,8 @@ class GameUI:
             except Exception as e:
                 print(f'Error occurred: {e}')
                 break
-
+    
+    # 發給server訊息
     def send_message(self, message: str) -> None:
         if not self.running:
             return
