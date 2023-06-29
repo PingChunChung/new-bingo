@@ -11,6 +11,9 @@ class GameServer:
         self.clients = []
         self.user_system = UserSystem()
 
+        self.ended_round_players = set()
+        self.ended_round_players_num = 0
+
     def start(self):
         self.server.listen()
         print(f'Server started, listening on {self.host}:{self.port}')
@@ -35,6 +38,7 @@ class GameServer:
                 message = client.recv(1024)
                 if not message:
                     print(f'Client {client.getsockname()} has closed the connection')
+                    self.broadcast(f"player_count {len(self.clients) - 1} ".encode(), None)
                     break
                 print(f'Received message: {message.decode()} from {client.getsockname()}')
                 # 玩家加入
@@ -44,6 +48,12 @@ class GameServer:
                 if message == b"win" or message == b"lose":
                     print("game over")
                     self.broadcast(message, client)
+                elif message == b"round_end":
+                    self.ended_round_players.add(client)
+                    self.broadcast(f"round_end {len(self.ended_round_players)} \n".encode(), client, toSender=True)
+                    if len(self.ended_round_players) == len(self.clients):
+                        self.broadcast(b"All complete, start next round \n", None)
+                        self.ended_round_players.clear()
             except Exception as e:
                 print(f'Error occurred: {e}')
                 break

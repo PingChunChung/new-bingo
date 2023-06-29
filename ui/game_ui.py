@@ -8,6 +8,8 @@ from ui.components.buttons import Button
 from ui.components.display import *
 import queue
 
+import traceback
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -40,7 +42,7 @@ class GameUI:
 
         # TODO: 線上模式的code，之後移動位置記得測試
         self.player_count = 0  # 玩家数量
-        self.round_players = set()  # 当前回合已完成的玩家
+        self.ended_round_players = set()  # 當前回合已完成的玩家
         self.waiting_for_round = False  # 是否等待回合结束
 
         self.total_grid_size = (600, 600)  # size of the grid
@@ -51,7 +53,7 @@ class GameUI:
         self.font = pygame.font.Font(None, 36)
 
         self.grid = Grid(self.game, self.screen, self.grid_size, self.font)
-        self.player_count_display = PlayerCountDisplay(self.screen, self.font, self.player_count_queue, self.round_players)
+        self.player_count_display = PlayerCountDisplay(self.screen, self.font, self.player_count_queue, self.ended_round_players)
         self.rounds_display = RoundsDisplay(self.game, self.screen, self.font)
         self.current_cell = None
 
@@ -88,16 +90,15 @@ class GameUI:
         pygame.display.set_caption('Bingo Game')
         clock = pygame.time.Clock()
 
-        # running = True
         while self.running:
             self.screen.fill(BLACK)
             self.grid.draw()
             self.rounds_display.draw((self.total_grid_size[0] + 10, 50))
-            self.player_count_display.draw((self.total_grid_size[0] + 10, 10))  # 顯示玩家數量
             for button in self.buttons.values():
                 button.draw(self.screen)
             if self.online_mode:
-                pygame.display.flip()
+                self.player_count_display.draw((self.total_grid_size[0] + 10, 10))  # 顯示玩家數量
+            pygame.display.flip()
             for event in pygame.event.get():
                 # 關閉遊戲
                 if event.type == pygame.QUIT:
@@ -129,28 +130,25 @@ class GameUI:
         while self.running:
             try:
                 message = self.server_socket.recv(1024).decode()
-                if message == "win":
-                    self.record["win"] += 1
-                    if len(self.round_players) == self.player_count:  # 所有玩家都完成回合
-                        utility.message_box.show_message(
-                            "Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
-                        self.restart_game()
-                elif message == "lose":
-                    self.waiting_for_round = True  # 等待回合结束
-                    # self.record["lose"] += 1
-                    # utility.message_box.show_message("Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
-                    # self.restart_game()
-                elif message.startswith("player_count"):
+                if message.startswith("player_count"):
                     print(f'received message: {message}')
-
                     _, count = message.split()
                     player_count = int(count)
                     player_count_queue.put(player_count)
-                    self.player_count_display.update_player_count(player_count)
+                    self.player_count_display.set_player_count(player_count)
+                elif message.startswith("round_end"):
+                    print(f'received message: {message}')
+                    fields = message.split()
+                    ended_round_players_num = int(fields[1])
+                    self.player_count_display.set_ended_round_players_num(ended_round_players_num)
+                    if ended_round_players_num == self.player_count_display.get_player_count():
+                        self.waiting_for_round = False
+                        self.player_count_display.set_ended_round_players_num(0)
                 else:
                     print("Received message:", message)
             except Exception as e:
                 print(f'Error occurred: {e}')
+                traceback.print_exc()
                 break
 
     def send_message(self, message):
@@ -160,25 +158,7 @@ class GameUI:
             self.server_socket.send(message.encode())
         except Exception as e:
             print(f'Error occurred: {e}')
-
-    def handle_click(self, event):
-        x, y = event.pos
-
-        if self.confirm_button_rect.collidepoint(x, y) and not self.confirm_button_pressed:
-            self.buttons["confirm"].handle_click(event)
-        if self.getRandomNum_button_rect.collidepoint(x, y):
-            self.buttons["getRandomNum"].handle_click(event)
-        if self.record_button_rect.collidepoint(x, y):
-            self.buttons["record"].handle_click(event)
-
-        # 點擊格子
-        if x < self.total_grid_size[0]:
-            i = x // self.grid_size[0]
-            j = y // self.grid_size[1]
-
-            if self.is_typing_mode:
-                self.current_cell = (i, j)
-                self.game.update_player_input(i, j, "")
+            traceback.print_exc()
 
     def quit_game(self):
         self.running = False
@@ -205,6 +185,25 @@ class GameUI:
         self.is_typing_mode = True
         self.confirm_button_pressed = False
         self.buttons["confirm"].set_color(WHITE)
+
+    def handle_click(self, event):
+        x, y = event.pos
+
+        if self.confirm_button_rect.collidepoint(x, y) and not self.confirm_button_pressed:
+            self.buttons["confirm"].handle_click(event)
+        if self.getRandomNum_button_rect.collidepoint(x, y):
+            self.buttons["getRandomNum"].handle_click(event)
+        if self.record_button_rect.collidepoint(x, y):
+            self.buttons["record"].handle_click(event)
+
+        # 點擊格子
+        if x < self.total_grid_size[0]:
+            i = x // self.grid_size[0]
+            j = y // self.grid_size[1]
+
+            if self.is_typing_mode:
+                self.current_cell = (i, j)
+                self.game.update_player_input(i, j, "")
 
     def handle_confirm(self):
         # 檢查有沒有全填滿
@@ -233,10 +232,11 @@ class GameUI:
             utility.message_box.show_message(
                 "Hints", "Please confirm your input.")
             return
-        if self.waiting_for_round:  # 等待回合结束，不能继续获取数字
-            utility.message_box.show_message(
-                "Wait", "Please wait for other players to finish the round.")
-            return
+        if self.online_mode:
+            if self.waiting_for_round:  # 等待回合结束，不能繼續get
+                utility.message_box.show_message(
+                    "Wait", "Please wait for other players to finish the round.")
+                return
         num = self.game.get_random_num_in_used_nums()
         # 這邊之後可以優化，不要用迴圈
         for i in range(self.game.grid_num):
@@ -244,10 +244,11 @@ class GameUI:
                 if self.game.grid[i][j] == num:
                     self.game.selected[i][j] = True
                     break
+        self.grid.draw()
+        self.rounds_display.draw()
+        pygame.display.flip()
         self.game.rounds += 1
-        if self.online_mode:
-            self.send_message(
-                "win" if self.game.check_game_finish() == "win" else "lose")
+        
         if self.game.check_game_finish() == "win":
             self.record["win"] += 1
             utility.message_box.show_message(
@@ -258,6 +259,10 @@ class GameUI:
             utility.message_box.show_message(
                 "Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
             self.restart_game()
+
+        if self.online_mode:
+            self.waiting_for_round = True
+            self.send_message("round_end")
         print(f"Get: {num}")
         print(f"rounds: {self.game.rounds}")
         return

@@ -18,8 +18,10 @@ class ButtonAnimation:
     def on_button_leave(self, event):
         event.widget.config(bg="SystemButtonFace")
 
+    def run(self):
+        self.window.mainloop()
 
-
+# offline/online
 class StartWindow(ButtonAnimation):
     def __init__(self, user_system: UserSystem):
         self.user_system = user_system
@@ -40,6 +42,7 @@ class StartWindow(ButtonAnimation):
         self.window.bind("<Return>", self.on_enter_pressed)
 
         self.current_button = None
+
     def on_enter_pressed(self, event):
         if self.current_button:
             self.current_button.invoke()
@@ -58,6 +61,7 @@ class StartWindow(ButtonAnimation):
             options_window = OptionsWindow(self.user_system, mode)
             options_window.run()
         return show_options
+        
 
     def run(self):
         self.window.mainloop()
@@ -96,6 +100,10 @@ class OptionsWindow(ButtonAnimation):
             self.play_button = Button(self.window, text="Play", command=self.game_start)
             self.play_button.pack(pady=5)
             self.set_button_animation(self.play_button)
+        else:
+            self.leaderboard_button = Button(self.window, text="Leaderboard", command=self.show_leaderboard)
+            self.leaderboard_button.pack(pady=5)
+            self.set_button_animation(self.leaderboard_button)
 
         self.user_system = user_system
         self.user = None
@@ -107,7 +115,7 @@ class OptionsWindow(ButtonAnimation):
             self.user = username
             self.window.destroy()
             game = GameLogic()
-            game_state = self.user_system.load_game_state(self.user) if not self.mode else None
+            game_state = self.user_system.load_game_state(self.user) if self.mode == "offline" else None
             ui = GameUI(self.user_system, game, self.user, game_state, online_mode=self.mode == "online")
             ui.start()
         else:
@@ -121,6 +129,9 @@ class OptionsWindow(ButtonAnimation):
         else:
             messagebox.showinfo("Error", "Username already exists")
 
+    def show_leaderboard(self):
+        return self.user_system.get_leaderboard()
+
     def game_start(self):
         self.window.destroy()
         game = GameLogic()
@@ -129,4 +140,13 @@ class OptionsWindow(ButtonAnimation):
 
     def run(self):
         self.window.mainloop()
-        return self.user
+
+
+class LeaderBoard(ButtonAnimation):
+        def __init__(self):
+            self.window = Tk()
+            self.window.title("Leaderboard")
+            self.window.geometry("250x200")
+
+        def run(self):
+            self.window.mainloop()

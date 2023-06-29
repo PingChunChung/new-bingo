@@ -5,10 +5,12 @@ class GameLogic():
     def __init__(self):
         self.grid_num = 4
         self.grid = [["" for _ in range(self.grid_num)] for _ in range(self.grid_num)]
-        self.selected = [[False]*self.grid_num for _ in range(self.grid_num)]
         self.used_nums = []
-
         self.player_inputs = {}
+        # self.grid = [['2', '24', '25', '11'], ['44', '3', '13', '26'], ['16', '23', '5', '12'], ['31', '15', '14', '7']]
+        # self.used_nums = ['2', '24', '25', '11', '44', '3', '13', '26', '16', '23', '5', '12', '31', '15', '14', '7']
+        # self.player_inputs = {(x, y): self.grid[y][x] for y in range(self.grid_num) for x in range(self.grid_num)}
+        self.selected = [[False]*self.grid_num for _ in range(self.grid_num)]
 
         self.rounds = 0
 

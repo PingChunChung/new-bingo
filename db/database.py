@@ -13,12 +13,12 @@ class UserSystem:
         hashed_password = self.hash_password(password)
         user = {"username": username, "password": hashed_password}
         self.collection.insert_one(user)
-        return True  # Registration successful
+        return True
 
     def login(self, username, password):
         hashed_password = self.hash_password(password)
         account = self.collection.find_one({"username": username, "password": hashed_password})
-        return bool(account)  # Returns True if login successful
+        return bool(account)
 
     def save_game_state(self, username, game_state):
         def convert_keys(obj):
@@ -45,3 +45,15 @@ class UserSystem:
         hash_object = hashlib.sha256(password.encode())
         hashed_password = hash_object.hexdigest()
         return hashed_password
+    
+    def update_leaderboard(self, username, wins, losses):
+        self.collection.update_one(
+            {"username": username},
+            {"$set": {"wins": wins, "losses": losses}},
+            upsert=True
+        )
+
+    def get_leaderboard(self, limit=10):
+        leaderboard = self.collection.find().sort(
+            [("wins", -1), ("losses", 1)]).limit(limit)
+        return leaderboard
