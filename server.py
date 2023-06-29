@@ -3,7 +3,7 @@ import threading
 from db.database import UserSystem
 
 class GameServer:
-    def __init__(self, host='localhost', port=12345):
+    def __init__(self, host: str = 'localhost', port: int = 12345):
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -14,7 +14,7 @@ class GameServer:
         self.ended_round_players = set()
         self.ended_round_players_num = 0
 
-    def start(self):
+    def start(self) -> None:
         self.server.listen()
         print(f'Server started, listening on {self.host}:{self.port}')
         while True:
@@ -24,15 +24,14 @@ class GameServer:
             thread = threading.Thread(target=self.handle_client, args=(client,))
             thread.start()
 
-    def broadcast(self, message, sender, toSender: bool = False):
+    def broadcast(self, message: bytes, sender: socket.socket, toSender: bool = False) -> None:
         for client in self.clients:
             if client != sender:
                 client.send(message)
             if toSender:
                 sender.send(message)
 
-
-    def handle_client(self, client):
+    def handle_client(self, client: socket.socket) -> None:
         while True:
             try:
                 message = client.recv(1024)
@@ -59,7 +58,8 @@ class GameServer:
                 break
         self.clients.remove(client)
         client.close()
-    def close(self):
+
+    def close(self) -> None:
         self.server.close()
 
 if __name__ == "__main__":

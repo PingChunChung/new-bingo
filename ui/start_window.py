@@ -1,24 +1,20 @@
 from tkinter import *
-
 from utility.message_box import messagebox
 from db.database import UserSystem
-
 from game.logic import GameLogic
 from ui.game_ui import GameUI
-
-
-
+from typing import Optional, Callable
 # 滑鼠事件
 class ButtonAnimation:
-    def set_button_animation(self, button):
+    def set_button_animation(self, button: Button) -> None:
         button.bind("<Enter>", self.on_button_enter)
         button.bind("<Leave>", self.on_button_leave)
-    def on_button_enter(self, event):
+
+    def on_button_enter(self, event: Event) -> None:
         event.widget.config(bg="lightblue")
 
-    def on_button_leave(self, event):
+    def on_button_leave(self, event: Event) -> None:
         event.widget.config(bg="SystemButtonFace")
-
 
 
 # offline/online
@@ -41,13 +37,13 @@ class StartWindow(ButtonAnimation):
         self.window.bind("<Tab>", self.on_tab_pressed)
         self.window.bind("<Return>", self.on_enter_pressed)
 
-        self.current_button = None
+        self.current_button: Optional[Button] = None
 
-    def on_enter_pressed(self, event):
+    def on_enter_pressed(self, event: Event) -> None:
         if self.current_button:
             self.current_button.invoke()
 
-    def on_tab_pressed(self, event):
+    def on_tab_pressed(self, event: Event) -> None:
         if self.offline_button == self.current_button:
             self.online_button.focus_set()
             self.current_button = self.online_button
@@ -55,19 +51,20 @@ class StartWindow(ButtonAnimation):
             self.offline_button.focus_set()
             self.current_button = self.offline_button
 
-    def show_options_window(self, mode):
-        def show_options():
+    def show_options_window(self, mode: str) -> Callable[[], None]:
+        def show_options() -> None:
             self.window.destroy()
             options_window = OptionsWindow(self.user_system, mode)
             options_window.run()
-        return show_options
-        
 
-    def run(self):
+        return show_options
+
+    def run(self) -> None:
         self.window.mainloop()
 
+
 class OptionsWindow(ButtonAnimation):
-    def __init__(self, user_system: UserSystem, mode):
+    def __init__(self, user_system: UserSystem, mode: str):
         self.window = Tk()
         self.window.title(f"{mode.capitalize()} Options")
         self.window.geometry("250x200")
@@ -106,9 +103,9 @@ class OptionsWindow(ButtonAnimation):
             self.set_button_animation(self.leaderboard_button)
 
         self.user_system = user_system
-        self.user = None
+        self.user: Optional[str] = None
 
-    def login(self):
+    def login(self) -> None:
         username = self.username_entry.get()
         password = self.password_entry.get()
         if self.user_system.login(username, password):
@@ -121,7 +118,7 @@ class OptionsWindow(ButtonAnimation):
         else:
             messagebox.showinfo("Error", "Invalid username or password")
 
-    def register(self):
+    def register(self) -> None:
         username = self.username_entry.get()
         password = self.password_entry.get()
         if self.user_system.register(username, password):
@@ -129,18 +126,17 @@ class OptionsWindow(ButtonAnimation):
         else:
             messagebox.showinfo("Error", "Username already exists")
 
-    def show_leaderboard(self):
+    def show_leaderboard(self) -> None:
         leaderBoard = LeaderBoard(self.user_system)
-        LeaderBoard.run()
+        leaderBoard.run()
 
-
-    def game_start(self):
+    def game_start(self) -> None:
         self.window.destroy()
         game = GameLogic()
         ui = GameUI(self.user_system, game, online_mode=self.mode == "online")
         ui.start()
 
-    def run(self):
+    def run(self) -> None:
         self.window.mainloop()
 
 
@@ -162,5 +158,5 @@ class LeaderBoard(ButtonAnimation):
             player_label = Label(self.window, text=text)
             player_label.pack()
 
-    def run(self):
+    def run(self) -> None:
         self.window.mainloop()

@@ -1,36 +1,30 @@
 import random
 from collections import Counter
+from typing import List, Tuple, Dict
 
-class GameLogic():
+class GameLogic:
     def __init__(self):
-        self.grid_num = 4
-        self.grid = [["" for _ in range(self.grid_num)] for _ in range(self.grid_num)]
-        self.used_nums = []
-        self.player_inputs = {}
-        # self.grid = [['2', '24', '25', '11'], ['44', '3', '13', '26'], ['16', '23', '5', '12'], ['31', '15', '14', '7']]
-        # self.used_nums = ['2', '24', '25', '11', '44', '3', '13', '26', '16', '23', '5', '12', '31', '15', '14', '7']
-        # self.player_inputs = {(x, y): self.grid[y][x] for y in range(self.grid_num) for x in range(self.grid_num)}
-        self.selected = [[False]*self.grid_num for _ in range(self.grid_num)]
-
-        self.rounds = 0
-
-        self.min_number = 1
-        self.max_number = 99
+        self.grid_num: int = 4
+        self.grid: List[List[str]] = [["" for _ in range(self.grid_num)] for _ in range(self.grid_num)]
+        self.used_nums: List[str] = []
+        self.player_inputs: Dict[Tuple[int, int], str] = {}
+        self.selected: List[List[bool]] = [[False] * self.grid_num for _ in range(self.grid_num)]
+        self.rounds: int = 0
+        self.min_number: int = 1
+        self.max_number: int = 99
     
-    def select(self, x, y):
-        if self.selected[x][y] == False and (x,y) in self.player_inputs:  
+    def select(self, x: int, y: int) -> str:
+        if self.selected[x][y] == False and (x, y) in self.player_inputs:  
             self.selected[x][y] = True
-        print(f'(x, y) : {self.selected[x][y]}')
-        print(f'used nums: {self.used_nums}')
         return self.check_game_over()
     
-    def check_game_finish(self):
+    def check_game_finish(self) -> str:
         if self.check_game_win():
             return "win"
         if self.check_game_lose():
             return "lose"
 
-    def check_game_win(self):
+    def check_game_win(self) -> bool:
         for i in range(self.grid_num):
             if all(self.selected[i][j] for j in range(self.grid_num)):
                 return True
@@ -38,24 +32,23 @@ class GameLogic():
                 return True
         if all(self.selected[i][i] for i in range(self.grid_num)):
             return True
-        if all(self.selected[i][self.grid_num-1-i] for i in range(self.grid_num)):
+        if all(self.selected[i][self.grid_num - 1 - i] for i in range(self.grid_num)):
             return True
         return False
     
-    def check_game_lose(self):
+    def check_game_lose(self) -> bool:
         if self.rounds >= 8:
             return True
         return False
     
-    def update_player_input(self, x, y, value):
+    def update_player_input(self, x: int, y: int, value: str) -> None:
         self.grid[y][x] = value
         self.player_inputs[(x, y)] = value
-        print(f'player_inputs[(x,y)]: {self.player_inputs[(x,y)]}')
     
-    def is_all_filled(self):
-        return len(self.player_inputs) == self.grid_num**2
+    def is_all_filled(self) -> bool:
+        return len(self.player_inputs) == self.grid_num ** 2
     
-    def get_random_num_in_used_nums(self):
+    def get_random_num_in_used_nums(self) -> str:
         output = random.choice(self.used_nums)
         self.used_nums.remove(output)
         return output
@@ -81,8 +74,7 @@ class GameLogic():
                 return False
         return True
     
-
     def is_invalid_num_range(self, value: int) -> bool:
-        if not self.min_number <= int(value) <= self.max_number:
+        if not self.min_number <= value <= self.max_number:
             return True
         return False

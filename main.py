@@ -1,7 +1,7 @@
 from db.database import UserSystem
 from ui.start_window import *
 
-def main():
+def main() -> None:
     user_system = UserSystem()
     start_window = StartWindow(user_system)
     start_window.run()
