@@ -245,17 +245,18 @@ class GameUI:
                     self.game.selected[i][j] = True
                     break
         self.grid.draw()
-        self.rounds_display.draw()
         pygame.display.flip()
         self.game.rounds += 1
         
         if self.game.check_game_finish() == "win":
             self.record["win"] += 1
+            self.user_system.update_leaderboard(self.player_name, self.record["win"], self.record["lose"])
             utility.message_box.show_message(
                 "Win!", f"You win!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
             self.restart_game()
         elif self.game.check_game_finish() == "lose":
             self.record["lose"] += 1
+            self.user_system.update_leaderboard(self.player_name, self.record["win"], self.record["lose"])
             utility.message_box.show_message(
                 "Lose!", f"You lose!\nWin: {self.record['win']} - Lose: {self.record['lose']}")
             self.restart_game()

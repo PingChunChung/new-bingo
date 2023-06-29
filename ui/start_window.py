@@ -1,4 +1,5 @@
 from tkinter import *
+
 from utility.message_box import messagebox
 from db.database import UserSystem
 
@@ -18,8 +19,7 @@ class ButtonAnimation:
     def on_button_leave(self, event):
         event.widget.config(bg="SystemButtonFace")
 
-    def run(self):
-        self.window.mainloop()
+
 
 # offline/online
 class StartWindow(ButtonAnimation):
@@ -130,7 +130,9 @@ class OptionsWindow(ButtonAnimation):
             messagebox.showinfo("Error", "Username already exists")
 
     def show_leaderboard(self):
-        return self.user_system.get_leaderboard()
+        leaderBoard = LeaderBoard(self.user_system)
+        LeaderBoard.run()
+
 
     def game_start(self):
         self.window.destroy()
@@ -143,10 +145,22 @@ class OptionsWindow(ButtonAnimation):
 
 
 class LeaderBoard(ButtonAnimation):
-        def __init__(self):
-            self.window = Tk()
-            self.window.title("Leaderboard")
-            self.window.geometry("250x200")
+    def __init__(self, user_system: UserSystem):
+        self.user_system = user_system
+        self.window = Toplevel()
+        self.window.title("Leaderboard")
 
-        def run(self):
-            self.window.mainloop()
+        leaderboard = self.user_system.get_leaderboard()
+
+        # 創建排行榜標籤
+        label = Label(self.window, text="Leaderboard", font=("Helvetica", 16, "bold"))
+        label.pack(pady=10)
+
+        # 顯示每個玩家的戰績
+        for index, player in enumerate(leaderboard, 1):
+            text = f"{index}. {player['username']}: Wins - {player['wins']}, Losses - {player['losses']}"
+            player_label = Label(self.window, text=text)
+            player_label.pack()
+
+    def run(self):
+        self.window.mainloop()
